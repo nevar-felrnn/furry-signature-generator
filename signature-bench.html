@@ -1,0 +1,771 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body>
+<title>Signature Bench</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;700&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400&display=swap">
+<style>
+/* Layout: workbench — form column on the left, sticky "outbox" preview on the right; stacks under 900px. */
+:root {
+  --paper: #f6f7f5;
+  --panel: #ffffff;
+  --ink: #17201d;
+  --ink-soft: #4b5751;
+  --rule: #d9ded9;
+  --accent: #1f5f55;
+  --accent-ink: #ffffff;
+  --warn: #9a4b00;
+  --ok: #1f6b3a;
+  --field: #ffffff;
+  --display: "Familjen Grotesk", "Helvetica Neue", Arial, sans-serif;
+  --body: "Public Sans", "Helvetica Neue", Arial, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --paper: #121715;
+    --panel: #1a211e;
+    --ink: #e7ece9;
+    --ink-soft: #a9b5af;
+    --rule: #2f3a35;
+    --accent: #6cc3b2;
+    --accent-ink: #0d1412;
+    --warn: #f0a85a;
+    --ok: #7fd49b;
+    --field: #121715;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --paper: #121715;
+  --panel: #1a211e;
+  --ink: #e7ece9;
+  --ink-soft: #a9b5af;
+  --rule: #2f3a35;
+  --accent: #6cc3b2;
+  --accent-ink: #0d1412;
+  --warn: #f0a85a;
+  --ok: #7fd49b;
+  --field: #121715;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font: 15px/1.5 var(--body);
+  padding-block: 28px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 24px; }
+header h1 { font: 700 30px/1.1 var(--display); margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+header p { margin: 6px 0 0; color: var(--ink-soft); max-width: 65ch; }
+.grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 24px; align-items: start; }
+@media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+.col { display: grid; gap: 18px; min-width: 0; }
+section.box { background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; padding: 18px; display: grid; gap: 14px; }
+section.box > h2 { font: 700 13px/1 var(--display); text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-soft); margin: 0; }
+.row { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+label.f { display: grid; gap: 4px; font-size: 13px; font-weight: 600; color: var(--ink-soft); }
+input[type="text"], input[type="url"], input[type="email"], input[type="tel"], select, textarea {
+  font: 15px/1.3 var(--body); color: var(--ink); background: var(--field);
+  border: 1px solid var(--rule); border-radius: 6px; padding: 8px 10px; width: 100%; min-width: 0;
+}
+textarea { resize: vertical; min-height: 60px; }
+input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible, [tabindex]:focus-visible {
+  outline: 3px solid var(--accent); outline-offset: 2px;
+}
+button {
+  font: 600 14px/1 var(--body); border-radius: 6px; padding: 9px 14px; cursor: pointer;
+  border: 1px solid var(--rule); background: var(--panel); color: var(--ink);
+}
+button:hover { border-color: var(--ink-soft); }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+button.icon { padding: 7px 9px; min-width: 34px; }
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+.hint { font-size: 13px; color: var(--ink-soft); margin: 0; }
+.check { display: flex; gap: 8px; align-items: center; font-size: 14px; }
+.check input { width: 18px; height: 18px; accent-color: var(--accent); }
+
+/* logo */
+.logo-zone { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 14px; align-items: center; }
+@media (max-width: 480px) { .logo-zone { grid-template-columns: 1fr; } }
+.logo-thumb { width: 120px; height: 72px; border: 1px dashed var(--rule); border-radius: 6px; display: grid; place-items: center; background: #fff; overflow: hidden; }
+.logo-thumb img { max-width: 100%; max-height: 100%; }
+.logo-thumb span { font-size: 12px; color: #5b6660; }
+.seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 6px; overflow: hidden; }
+.seg button { border: 0; border-radius: 0; padding: 8px 12px; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.inline { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+input[type="range"] { accent-color: var(--accent); flex: 1; min-width: 120px; }
+input[type="color"] { width: 44px; height: 34px; padding: 2px; border: 1px solid var(--rule); border-radius: 6px; background: var(--field); }
+
+/* lines */
+.lines { display: grid; gap: 10px; }
+.line { display: grid; grid-template-columns: 130px 110px minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.line .moves { display: flex; gap: 4px; }
+@media (max-width: 620px) {
+  .line { grid-template-columns: 1fr 1fr; padding-bottom: 10px; border-bottom: 1px solid var(--rule); }
+  .line .val { grid-column: 1 / -1; }
+  .line .moves { grid-column: 1 / -1; justify-content: flex-end; }
+}
+.empty-lines { font-size: 14px; color: var(--ink-soft); border: 1px dashed var(--rule); border-radius: 6px; padding: 12px; margin: 0; }
+.adder { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 4px; border-top: 1px solid var(--rule); }
+.adder select { width: auto; flex: 1; min-width: 160px; }
+
+/* preview */
+.sticky { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 16px); }
+@media (max-width: 900px) { .sticky { position: static; } }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--rule); }
+.tabs button { border: 0; border-bottom: 3px solid transparent; border-radius: 0; background: none; padding: 10px 12px; color: var(--ink-soft); }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.mail { border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; }
+.mail-head { font-size: 13px; color: #5b6660; background: #eef1ee; padding: 10px 14px; display: grid; gap: 2px; border-bottom: 1px solid #dde2de; }
+.mail-head b { color: #2d3632; font-weight: 600; }
+.mail-body { background: #ffffff; color: #1a1a1a; padding: 18px 16px 22px; overflow-x: auto; font-family: Arial, Helvetica, sans-serif; font-size: 14px; }
+.mail.dark .mail-head { background: #2a2c30; color: #b8bcc4; border-color: #3a3d42; }
+.mail.dark .mail-head b { color: #e8e9ec; }
+.mail.dark .mail-body { background: #1e1f22; color: #e8e9ec; }
+.mail-body .msg { margin: 0 0 16px; }
+pre.code { margin: 0; font: 12.5px/1.55 var(--mono); background: var(--field); border: 1px solid var(--rule); border-radius: 8px; padding: 12px; overflow: auto; max-height: 420px; white-space: pre; color: var(--ink); }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.status { min-height: 1.5em; font-size: 14px; margin: 0; }
+.status.ok { color: var(--ok); }
+.status.warn { color: var(--warn); }
+
+/* audit */
+.audit { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.audit li { display: grid; grid-template-columns: 54px minmax(0, 1fr); gap: 10px; align-items: baseline; font-size: 14px; }
+.pill { font: 600 11px/1 var(--body); text-transform: uppercase; letter-spacing: 0.06em; padding: 4px 0; border-radius: 99px; text-align: center; border: 1px solid currentColor; }
+.pill.pass { color: var(--ok); }
+.pill.fix { color: var(--warn); }
+.audit .num { font-variant-numeric: tabular-nums; font-family: var(--mono); font-size: 13px; }
+
+details.install { border-top: 1px solid var(--rule); padding-top: 12px; }
+details.install summary { cursor: pointer; font-weight: 600; }
+details.install dl { margin: 10px 0 0; display: grid; gap: 10px; font-size: 14px; }
+details.install dt { font-weight: 600; }
+details.install dd { margin: 2px 0 0; color: var(--ink-soft); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@media (prefers-reduced-motion: no-preference) { button, .tabs button { transition: background-color .15s, border-color .15s, color .15s; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Signature Bench</h1>
+    <p>Fill in your details and the preview updates as you type. Copy the result into your email client, save it as an HTML file, or save a contact card (vCard).</p>
+  </header>
+
+  <div class="grid">
+    <div class="col">
+      <section class="box" aria-labelledby="h-id">
+        <h2 id="h-id">You</h2>
+        <div class="row">
+          <label class="f">Name<input id="f-name" type="text" autocomplete="name"></label>
+          <label class="f">Pronouns (optional)<input id="f-pronouns" type="text" placeholder="they/them"></label>
+        </div>
+        <div class="row">
+          <label class="f">Position<input id="f-title" type="text" autocomplete="organization-title"></label>
+          <label class="f">Organization<input id="f-org" type="text" autocomplete="organization"></label>
+        </div>
+      </section>
+
+      <section class="box" aria-labelledby="h-logo">
+        <h2 id="h-logo">Logo</h2>
+        <div class="logo-zone">
+          <div class="logo-thumb" id="logo-thumb"><span>No logo</span></div>
+          <div style="display:grid;gap:10px;">
+            <div class="inline">
+              <div class="seg" role="group" aria-label="Logo source">
+                <button type="button" id="mode-embed" aria-pressed="true">Upload file</button>
+                <button type="button" id="mode-url" aria-pressed="false">Hosted URL</button>
+              </div>
+            </div>
+            <div id="embed-ctl" class="inline">
+              <input id="f-logo-file" type="file" accept="image/png,image/jpeg,image/gif,image/svg+xml,image/webp" class="sr">
+              <button type="button" id="pick-logo">Choose image…</button>
+              <button type="button" id="remove-logo">Remove</button>
+            </div>
+            <label class="f" id="url-ctl" hidden>Image URL<input id="f-logo-url" type="url" placeholder="https://www.example.com/logo.png"></label>
+          </div>
+        </div>
+        <p class="hint" id="logo-hint"></p>
+        <label class="f">Alt text (read aloud by screen readers)<input id="f-alt" type="text"></label>
+        <label class="f">Logo width <span class="num" id="w-out"></span>
+          <input id="f-width" type="range" min="60" max="260" step="5">
+        </label>
+      </section>
+
+      <section class="box" aria-labelledby="h-lines">
+        <h2 id="h-lines">Contact lines</h2>
+        <p class="hint">Each line has a type, a label and a value. Empty lines are left out. Use the arrows to reorder.</p>
+        <div class="lines" id="lines"></div>
+        <div class="adder">
+          <label class="sr" for="add-type">Line type to add</label>
+          <select id="add-type"></select>
+          <label class="sr" for="add-count">How many</label>
+          <select id="add-count" style="flex:0 0 auto;width:auto;min-width:0;">
+            <option value="1">1 line</option><option value="2">2 lines</option><option value="3">3 lines</option><option value="5">5 lines</option>
+          </select>
+          <button type="button" id="add-line">Add</button>
+        </div>
+      </section>
+
+      <section class="box" aria-labelledby="h-style">
+        <h2 id="h-style">Style</h2>
+        <div class="row">
+          <label class="f">Layout
+            <select id="s-layout"><option value="side">Logo beside text</option><option value="stacked">Logo above text</option><option value="text">Text only</option></select>
+          </label>
+          <label class="f">Font
+            <select id="s-font"></select>
+          </label>
+          <label class="f">Text size
+            <select id="s-size"><option value="13">13 px</option><option value="14">14 px</option><option value="15">15 px</option><option value="16">16 px</option></select>
+          </label>
+        </div>
+        <div class="row">
+          <label class="f">Text colour<span class="inline"><input id="s-text" type="color"><span class="num" id="s-text-hex"></span></span></label>
+          <label class="f">Name &amp; link colour<span class="inline"><input id="s-accent" type="color"><span class="num" id="s-accent-hex"></span></span></label>
+        </div>
+        <div class="inline" style="gap:18px;">
+          <label class="check"><input id="s-labels" type="checkbox">Show labels</label>
+          <label class="check"><input id="s-divider" type="checkbox">Divider line</label>
+          <label class="check"><input id="s-underline" type="checkbox">Underline links</label>
+        </div>
+        <div class="inline">
+          <button type="button" id="clear-all">Clear form</button>
+        </div>
+      </section>
+    </div>
+
+    <div class="col sticky">
+      <section class="box" aria-labelledby="h-out">
+        <h2 id="h-out">Result</h2>
+        <div class="tabs" role="tablist" aria-label="Output">
+          <button type="button" role="tab" id="t-preview" aria-selected="true" aria-controls="p-preview">Preview</button>
+          <button type="button" role="tab" id="t-html" aria-selected="false" aria-controls="p-html" tabindex="-1">HTML</button>
+          <button type="button" role="tab" id="t-vcf" aria-selected="false" aria-controls="p-vcf" tabindex="-1">vCard</button>
+        </div>
+
+        <div role="tabpanel" id="p-preview" aria-labelledby="t-preview" style="display:grid;gap:12px;">
+          <div class="inline" style="justify-content:space-between;">
+            <span class="hint">Shown inside a sample email</span>
+            <div class="seg" role="group" aria-label="Preview background">
+              <button type="button" id="bg-light" aria-pressed="true">Light</button>
+              <button type="button" id="bg-dark" aria-pressed="false">Dark</button>
+            </div>
+          </div>
+          <div class="mail" id="mail">
+            <div class="mail-head"><div><b>To:</b> Sam Rivera</div><div><b>Subject:</b> Notes from Thursday</div></div>
+            <div class="mail-body">
+              <p class="msg">Hi Sam,<br>Thanks for the walkthrough. I’ll send the revised checklist by Friday.<br><br>Best,</p>
+              <div id="sig"></div>
+            </div>
+          </div>
+          <p class="hint" id="dark-note" hidden>Many mail apps recolour text in dark mode, but images stay as they are. Make sure your logo can still be seen here.</p>
+        </div>
+
+        <div role="tabpanel" id="p-html" aria-labelledby="t-html" hidden>
+          <pre class="code" id="code-html" tabindex="0" aria-label="Signature HTML"></pre>
+        </div>
+        <div role="tabpanel" id="p-vcf" aria-labelledby="t-vcf" hidden style="display:grid;gap:10px;">
+          <label class="check"><input id="v-photo" type="checkbox">Include logo as contact photo</label>
+          <pre class="code" id="code-vcf" tabindex="0" aria-label="vCard text"></pre>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="primary" id="copy-sig">Copy signature</button>
+          <button type="button" id="copy-html">Copy HTML</button>
+          <button type="button" id="save-html">Save .html</button>
+          <button type="button" id="save-vcf">Save .vcf</button>
+        </div>
+        <p class="status" id="status" role="status" aria-live="polite"></p>
+
+        <details class="install">
+          <summary>How to install</summary>
+          <dl>
+            <dt>Apple Mail</dt>
+            <dd>Click Copy signature. In Mail, go to Settings → Signatures, click +, untick “Always match my default message font”, then paste into the right-hand pane.</dd>
+            <dt>Thunderbird</dt>
+            <dd>Save .html and keep the file somewhere permanent. In Account Settings, tick “Use HTML” and “Attach the signature from a file instead”, then choose the file.</dd>
+            <dt>Gmail</dt>
+            <dd>Gmail removes uploaded (embedded) images when you paste. Switch the logo to Hosted URL, then copy and paste into Settings → General → Signature.</dd>
+            <dt>Outlook</dt>
+            <dd>Use a Hosted URL logo. Paste into Settings → Mail → Signatures (or File → Options → Mail → Signatures on desktop).</dd>
+          </dl>
+        </details>
+      </section>
+
+      <section class="box" aria-labelledby="h-audit">
+        <h2 id="h-audit">Accessibility check</h2>
+        <ul class="audit" id="audit"></ul>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var DEFAULT_LOGO = "data:image/svg+xml," + encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="600" height="200" viewBox="0 0 600 200">' +
+    '<rect x="10" y="10" width="180" height="180" rx="36" fill="#1f5f55"/>' +
+    '<text x="100" y="128" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="96" font-weight="700" fill="#ffffff">EO</text>' +
+    '<text x="220" y="92" font-family="Arial, Helvetica, sans-serif" font-size="64" font-weight="700" fill="#1a1a1a">EXAMPLE</text>' +
+    '<text x="220" y="162" font-family="Arial, Helvetica, sans-serif" font-size="64" font-weight="700" fill="#1a1a1a">ORG</text>' +
+    "</svg>");
+  var DEFAULT_ASPECT = 3;
+  var DEFAULT_LOGO_WIDTH = 165;
+  var STORE_KEY = "signature-bench-v1";
+
+  var TYPES = {
+    email:      { name: "Email",            label: "Email",    ph: "name@example.com",           kind: "email" },
+    phone:      { name: "Phone (office)",   label: "Phone",    ph: "+1 617 555 0142",            kind: "tel" },
+    mobile:     { name: "Phone (mobile)",   label: "Mobile",   ph: "+1 617 555 0199",            kind: "tel" },
+    fax:        { name: "Fax",              label: "Fax",      ph: "+1 617 555 0100",            kind: "plain" },
+    website:    { name: "Website",          label: "Web",      ph: "www.example.com",            kind: "url" },
+    linkedin:   { name: "LinkedIn",         label: "LinkedIn", ph: "linkedin.com/in/yourname",   kind: "url" },
+    social:     { name: "Other profile link", label: "Profile", ph: "github.com/yourname",       kind: "url" },
+    address:    { name: "Address",          label: "Address",  ph: "12 Main St, Boston, MA 02108", kind: "plain" },
+    text:       { name: "Custom text",      label: "",         ph: "Office hours: Mon–Thu, 9–5", kind: "plain" },
+    disclaimer: { name: "Disclaimer / footer", label: "",      ph: "This message may contain confidential information…", kind: "footer" }
+  };
+  var FONTS = {
+    "Arial": "Arial, Helvetica, sans-serif",
+    "Helvetica": "Helvetica, Arial, sans-serif",
+    "Verdana": "Verdana, Geneva, sans-serif",
+    "Tahoma": "Tahoma, Verdana, sans-serif",
+    "Trebuchet MS": "'Trebuchet MS', Arial, sans-serif",
+    "Georgia": "Georgia, 'Times New Roman', serif",
+    "Times New Roman": "'Times New Roman', Times, serif"
+  };
+
+  function example() {
+    return {
+      name: "Jordan Lee", pronouns: "they/them", title: "Program Coordinator", org: "Example Organization",
+      logo: { mode: "embed", data: DEFAULT_LOGO, url: "", aspect: DEFAULT_ASPECT, alt: "Example Organization logo", width: DEFAULT_LOGO_WIDTH },
+      lines: [
+        { type: "email", label: "Email", value: "jordan.lee@example.org" },
+        { type: "phone", label: "Phone", value: "+1 555 010 0142" },
+        { type: "website", label: "Web", value: "www.example.org" }
+      ],
+      style: { layout: "side", font: "Arial", size: 14, text: "#1a1a1a", accent: "#1a1a1a", labels: false, divider: true, underline: true },
+      vPhoto: true
+    };
+  }
+  function blank() {
+    var s = example();
+    s.name = s.pronouns = s.title = s.org = "";
+    s.logo = { mode: "embed", data: "", url: "", aspect: 2.5, alt: "", width: 160 };
+    s.lines = [{ type: "email", label: "Email", value: "" }, { type: "phone", label: "Phone", value: "" }, { type: "website", label: "Web", value: "" }];
+    return s;
+  }
+
+  var state = load() || example();
+  function load() {
+    try { var raw = localStorage.getItem(STORE_KEY); if (!raw) return null; var s = JSON.parse(raw); return s && s.style && s.lines ? s : null; } catch (e) { return null; }
+  }
+  var saveTimer;
+  function persist() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(function () { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {} }, 300);
+  }
+
+  var $ = function (id) { return document.getElementById(id); };
+  function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+
+  // ---------- link helpers ----------
+  function toUrl(v) {
+    v = v.trim(); if (!v) return "";
+    if (!/^https?:\/\//i.test(v)) v = "https://" + v.replace(/^\/+/, "");
+    try { var u = new URL(v); return (u.protocol === "https:" || u.protocol === "http:") ? u.href : ""; } catch (e) { return ""; }
+  }
+  function displayUrl(v) { return v.trim().replace(/^https?:\/\//i, "").replace(/\/$/, ""); }
+  function hrefFor(line) {
+    var t = TYPES[line.type], v = line.value.trim();
+    if (t.kind === "email") return /^[^\s@]+@[^\s@]+$/.test(v) ? "mailto:" + v : "";
+    if (t.kind === "tel") { var d = v.replace(/[^\d+]/g, ""); return d.length >= 3 ? "tel:" + d : ""; }
+    if (t.kind === "url") return toUrl(v);
+    return "";
+  }
+
+  // ---------- colour contrast ----------
+  function lum(hex) {
+    var n = parseInt(hex.slice(1), 16), c = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map(function (x) {
+      x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+  }
+  function contrast(a, b) { var x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); }
+
+  // ---------- signature HTML ----------
+  function logoSrc() {
+    var l = state.logo;
+    if (l.mode === "url") return toUrl(l.url);
+    return l.data || "";
+  }
+  function buildSignature() {
+    var st = state.style, font = FONTS[st.font] || FONTS.Arial, size = +st.size, lh = Math.round(size * 1.45);
+    var muted = "#555555";
+    var p = function (inner, extra) { return '<p style="margin:0;font-family:' + font + ";font-size:" + size + "px;line-height:" + lh + "px;color:" + st.text + ";" + (extra || "") + '">' + inner + "</p>"; };
+    var text = [];
+    if (state.name.trim()) {
+      var pr = state.pronouns.trim() ? ' <span style="font-weight:normal;font-size:' + size + "px;color:" + muted + ';">(' + esc(state.pronouns.trim()) + ")</span>" : "";
+      text.push('<p style="margin:0;font-family:' + font + ";font-size:" + Math.round(size * 1.3) + "px;line-height:" + Math.round(size * 1.75) + "px;font-weight:bold;color:" + st.accent + ';">' + esc(state.name.trim()) + pr + "</p>");
+    }
+    if (state.title.trim()) text.push(p(esc(state.title.trim()), "margin-top:2px;"));
+    if (state.org.trim()) text.push(p(esc(state.org.trim())));
+    var first = true, footers = [];
+    state.lines.forEach(function (line) {
+      var v = line.value.trim(); if (!v) return;
+      var t = TYPES[line.type];
+      if (t.kind === "footer") { footers.push(v); return; }
+      var href = hrefFor(line), lbl = (st.labels && line.label.trim()) ? '<span style="color:' + muted + ';">' + esc(line.label.trim()) + ":</span> " : "";
+      var shown = t.kind === "url" ? displayUrl(v) : v;
+      var body = href ? '<a href="' + esc(href) + '" style="color:' + st.accent + ";text-decoration:" + (st.underline ? "underline" : "none") + ';">' + esc(shown) + "</a>" : esc(shown);
+      text.push(p(lbl + body, first && text.length ? "margin-top:8px;" : ""));
+      first = false;
+    });
+
+    var src = logoSrc(), w = +state.logo.width, h = Math.round(w / (state.logo.aspect || 2.5));
+    var img = src ? '<img src="' + esc(src) + '" width="' + w + '" height="' + h + '" alt="' + esc(state.logo.alt.trim()) + '" style="display:block;border:0;width:' + w + "px;height:" + h + 'px;">' : "";
+    var site = state.lines.filter(function (l) { return l.type === "website" && l.value.trim(); })[0];
+    if (img && site && toUrl(site.value)) img = '<a href="' + esc(toUrl(site.value)) + '" style="text-decoration:none;">' + img + "</a>";
+    var rule = st.divider ? "2px solid " + st.accent : "0";
+    var textHtml = text.join("\n      ");
+    var tbl = '<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">\n';
+    if (st.layout === "side" && img) {
+      tbl += '  <tr>\n    <td valign="middle" style="padding:0 16px 0 0;' + (st.divider ? "border-right:" + rule + ";" : "") + '">\n      ' + img + '\n    </td>\n    <td valign="middle" style="padding:0 0 0 16px;">\n      ' + textHtml + "\n    </td>\n  </tr>\n";
+    } else if (st.layout === "stacked" && img) {
+      tbl += '  <tr>\n    <td style="padding:0 0 10px 0;">\n      ' + img + '\n    </td>\n  </tr>\n  <tr>\n    <td style="padding:' + (st.divider ? "10px" : "0") + " 0 0 0;" + (st.divider ? "border-top:" + rule + ";" : "") + '">\n      ' + textHtml + "\n    </td>\n  </tr>\n";
+    } else {
+      tbl += '  <tr>\n    <td style="padding:0 0 0 ' + (st.divider ? "12px" : "0") + ";" + (st.divider ? "border-left:" + rule + ";" : "") + '">\n      ' + textHtml + "\n    </td>\n  </tr>\n";
+    }
+    tbl += "</table>";
+    footers.forEach(function (f) {
+      tbl += '\n<p style="margin:12px 0 0;max-width:520px;font-family:' + font + ';font-size:12px;line-height:17px;color:' + muted + ';">' + esc(f).replace(/\n/g, "<br>") + "</p>";
+    });
+    return tbl;
+  }
+  function plainSignature() {
+    var out = [state.name + (state.pronouns ? " (" + state.pronouns + ")" : ""), state.title, state.org];
+    state.lines.forEach(function (l) { if (l.value.trim()) out.push((state.style.labels && l.label ? l.label + ": " : "") + l.value.trim()); });
+    return out.filter(function (x) { return x && x.trim(); }).join("\n");
+  }
+
+  // ---------- vCard ----------
+  function vEsc(s) { return String(s).replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/,/g, "\\,").replace(/;/g, "\\;"); }
+  function fold(line) {
+    var out = [], first = true;
+    while (line.length > (first ? 75 : 74)) { var n = first ? 75 : 74; out.push((first ? "" : " ") + line.slice(0, n)); line = line.slice(n); first = false; }
+    out.push((first ? "" : " ") + line);
+    return out.join("\r\n");
+  }
+  function buildVCard() {
+    var L = ["BEGIN:VCARD", "VERSION:3.0"];
+    var parts = state.name.trim().split(/\s+/).filter(Boolean);
+    var last = parts.length > 1 ? parts.pop() : "", firstN = parts.join(" ");
+    L.push("N:" + vEsc(last) + ";" + vEsc(firstN) + ";;;");
+    L.push("FN:" + vEsc(state.name.trim() || state.org.trim() || "Contact"));
+    if (state.org.trim()) L.push("ORG:" + vEsc(state.org.trim()));
+    if (state.title.trim()) L.push("TITLE:" + vEsc(state.title.trim()));
+    var notes = [];
+    state.lines.forEach(function (l) {
+      var v = l.value.trim(); if (!v) return;
+      switch (l.type) {
+        case "email": L.push("EMAIL;TYPE=INTERNET,WORK:" + vEsc(v)); break;
+        case "phone": L.push("TEL;TYPE=WORK,VOICE:" + vEsc(v)); break;
+        case "mobile": L.push("TEL;TYPE=CELL,VOICE:" + vEsc(v)); break;
+        case "fax": L.push("TEL;TYPE=WORK,FAX:" + vEsc(v)); break;
+        case "website": L.push("URL:" + vEsc(toUrl(v) || v)); break;
+        case "linkedin": L.push("X-SOCIALPROFILE;TYPE=linkedin:" + vEsc(toUrl(v) || v)); break;
+        case "social": L.push("URL;TYPE=" + vEsc((l.label || "profile").replace(/[^A-Za-z0-9-]/g, "") || "profile") + ":" + vEsc(toUrl(v) || v)); break;
+        case "address": L.push("ADR;TYPE=WORK:;;" + vEsc(v) + ";;;;"); break;
+        case "text": notes.push((l.label ? l.label + ": " : "") + v); break;
+      }
+    });
+    if (notes.length) L.push("NOTE:" + vEsc(notes.join("\n")));
+    if (state.vPhoto && state.logo.mode === "embed" && state.logo.data) {
+      var m = /^data:image\/(png|jpeg);base64,(.+)$/.exec(state.logo.data);
+      if (m) L.push("PHOTO;ENCODING=b;TYPE=" + (m[1] === "png" ? "PNG" : "JPEG") + ":" + m[2]);
+    }
+    L.push("END:VCARD");
+    return L.map(fold).join("\r\n") + "\r\n";
+  }
+  function vcfPreview(v) {
+    return v.replace(/(PHOTO;[^:]+:)[\s\S]*?(\r\nEND:VCARD)/, function (_, a, b) { return a + "…(embedded image, " + Math.round(state.logo.data.length * 0.75 / 1024) + " KB)" + b; });
+  }
+
+  // ---------- audit ----------
+  function audit() {
+    var st = state.style, items = [];
+    var hasImg = st.layout !== "text" && !!logoSrc();
+    if (hasImg) items.push(state.logo.alt.trim() ? ["pass", "Logo has alt text: “" + state.logo.alt.trim() + "”"] : ["fix", "Add alt text so screen readers can announce the logo."]);
+    var ct = contrast(st.text, "#ffffff"), ca = contrast(st.accent, "#ffffff");
+    items.push([ct >= 4.5 ? "pass" : "fix", 'Text contrast <span class="num">' + ct.toFixed(1) + ":1</span> on white " + (ct >= 4.5 ? "(meets WCAG AA 4.5:1)" : "— needs at least 4.5:1. Pick a darker text colour.")]);
+    items.push([ca >= 4.5 ? "pass" : "fix", 'Name/link contrast <span class="num">' + ca.toFixed(1) + ":1</span> on white " + (ca >= 4.5 ? "(meets WCAG AA)" : "— needs at least 4.5:1. Pick a darker colour.")]);
+    if (!st.underline) {
+      var cl = contrast(st.accent, st.text);
+      items.push([cl >= 3 ? "pass" : "fix", cl >= 3 ? "Links differ from text by colour (" + cl.toFixed(1) + ":1)." : "Links look like plain text. Turn on underline or pick a link colour that differs from the text."]);
+    }
+    items.push([+st.size >= 14 ? "pass" : "fix", +st.size >= 14 ? "Text is " + st.size + " px." : "13 px is small on phones. 14 px or larger reads better."]);
+    var bad = state.lines.filter(function (l) { var t = TYPES[l.type]; return l.value.trim() && (t.kind === "email" || t.kind === "url" || t.kind === "tel") && !hrefFor(l); });
+    if (bad.length) items.push(["fix", bad.length + " line" + (bad.length > 1 ? "s" : "") + " won’t become a link: check “" + esc(bad[0].value.trim()) + "”."]);
+    if (hasImg && state.logo.mode === "embed") items.push(["pass", "Logo is embedded. Works in Apple Mail and Thunderbird; use a hosted URL for Gmail and Outlook."]);
+    $("audit").innerHTML = items.map(function (i) { return '<li><span class="pill ' + i[0] + '">' + (i[0] === "pass" ? "OK" : "Fix") + "</span><span>" + i[1] + "</span></li>"; }).join("");
+  }
+
+  // ---------- render ----------
+  function render() {
+    var html = buildSignature();
+    $("sig").innerHTML = html;
+    $("code-html").textContent = html;
+    $("code-vcf").textContent = vcfPreview(buildVCard());
+    var src = logoSrc();
+    $("logo-thumb").innerHTML = src ? '<img alt="" src="' + esc(src) + '">' : "<span>No logo</span>";
+    $("w-out").textContent = state.logo.width + " px";
+    $("logo-hint").textContent = state.logo.mode === "url"
+      ? "Use a public image link (for example on your website). Gmail and Outlook need this."
+      : (state.logo.data ? "Embedded in the signature. Best for Apple Mail and Thunderbird." : "PNG, JPG or SVG. It is resized to keep the signature small.");
+    $("s-text-hex").textContent = state.style.text;
+    $("s-accent-hex").textContent = state.style.accent;
+    audit();
+    persist();
+  }
+
+  function renderLines() {
+    var box = $("lines");
+    box.innerHTML = "";
+    if (!state.lines.length) { box.innerHTML = '<p class="empty-lines">No contact lines yet. Pick a type below and click Add.</p>'; return; }
+    state.lines.forEach(function (line, i) {
+      var row = document.createElement("div");
+      row.className = "line";
+      var opts = Object.keys(TYPES).map(function (k) { return '<option value="' + k + '"' + (k === line.type ? " selected" : "") + ">" + TYPES[k].name + "</option>"; }).join("");
+      var n = i + 1;
+      row.innerHTML =
+        '<select id="ln-type-' + i + '" aria-label="Line ' + n + ' type">' + opts + "</select>" +
+        '<input id="ln-label-' + i + '" type="text" aria-label="Line ' + n + ' label" placeholder="Label" value="' + esc(line.label) + '">' +
+        (TYPES[line.type].kind === "footer"
+          ? '<textarea class="val" id="ln-val-' + i + '" aria-label="Line ' + n + ' text" placeholder="' + esc(TYPES[line.type].ph) + '">' + esc(line.value) + "</textarea>"
+          : '<input class="val" id="ln-val-' + i + '" type="text" aria-label="Line ' + n + " " + esc(TYPES[line.type].name) + '" placeholder="' + esc(TYPES[line.type].ph) + '" value="' + esc(line.value) + '">') +
+        '<div class="moves">' +
+          '<button type="button" class="icon" data-act="up" aria-label="Move line ' + n + ' up"' + (i === 0 ? " disabled" : "") + ">↑</button>" +
+          '<button type="button" class="icon" data-act="down" aria-label="Move line ' + n + ' down"' + (i === state.lines.length - 1 ? " disabled" : "") + ">↓</button>" +
+          '<button type="button" class="icon" data-act="del" aria-label="Remove line ' + n + '">✕</button>' +
+        "</div>";
+      row.querySelector("select").addEventListener("change", function (e) {
+        var old = TYPES[line.type].label;
+        line.type = e.target.value;
+        if (!line.label || line.label === old) line.label = TYPES[line.type].label;
+        renderLines(); render();
+        var el = $("ln-type-" + i); if (el) el.focus();
+      });
+      row.querySelector('[id^="ln-label"]').addEventListener("input", function (e) { line.label = e.target.value; render(); });
+      row.querySelector(".val").addEventListener("input", function (e) { line.value = e.target.value; render(); });
+      row.querySelector(".moves").addEventListener("click", function (e) {
+        var b = e.target.closest("button"); if (!b) return;
+        var act = b.dataset.act, L = state.lines, focusId;
+        if (act === "up" && i > 0) { L.splice(i - 1, 0, L.splice(i, 1)[0]); focusId = "ln-val-" + (i - 1); }
+        if (act === "down" && i < L.length - 1) { L.splice(i + 1, 0, L.splice(i, 1)[0]); focusId = "ln-val-" + (i + 1); }
+        if (act === "del") { L.splice(i, 1); focusId = L.length ? "ln-val-" + Math.min(i, L.length - 1) : "add-type"; say("Line removed.", "ok"); }
+        renderLines(); render();
+        var f = $(focusId); if (f) f.focus();
+      });
+      box.appendChild(row);
+    });
+  }
+
+  function syncForm() {
+    $("f-name").value = state.name; $("f-pronouns").value = state.pronouns; $("f-title").value = state.title; $("f-org").value = state.org;
+    $("f-alt").value = state.logo.alt; $("f-width").value = state.logo.width; $("f-logo-url").value = state.logo.url;
+    setMode(state.logo.mode, true);
+    $("s-layout").value = state.style.layout; $("s-font").value = state.style.font; $("s-size").value = String(state.style.size);
+    $("s-text").value = state.style.text; $("s-accent").value = state.style.accent;
+    $("s-labels").checked = state.style.labels; $("s-divider").checked = state.style.divider; $("s-underline").checked = state.style.underline;
+    $("v-photo").checked = state.vPhoto;
+    renderLines(); render();
+  }
+
+  // ---------- wiring ----------
+  $("add-type").innerHTML = Object.keys(TYPES).map(function (k) { return '<option value="' + k + '">' + TYPES[k].name + "</option>"; }).join("");
+  $("s-font").innerHTML = Object.keys(FONTS).map(function (k) { return '<option value="' + k + '">' + k + "</option>"; }).join("");
+
+  [["f-name", "name"], ["f-pronouns", "pronouns"], ["f-title", "title"], ["f-org", "org"]].forEach(function (p) {
+    $(p[0]).addEventListener("input", function (e) { state[p[1]] = e.target.value; render(); });
+  });
+  $("f-alt").addEventListener("input", function (e) { state.logo.alt = e.target.value; render(); });
+  $("f-width").addEventListener("input", function (e) { state.logo.width = +e.target.value; render(); });
+  $("f-logo-url").addEventListener("input", function (e) {
+    state.logo.url = e.target.value;
+    var u = toUrl(e.target.value);
+    if (u) { var im = new Image(); im.onload = function () { if (im.naturalWidth) { state.logo.aspect = im.naturalWidth / im.naturalHeight; render(); } }; im.src = u; }
+    render();
+  });
+  ["layout", "font", "size"].forEach(function (k) { $("s-" + k).addEventListener("change", function (e) { state.style[k] = k === "size" ? +e.target.value : e.target.value; render(); }); });
+  ["text", "accent"].forEach(function (k) { $("s-" + k).addEventListener("input", function (e) { state.style[k] = e.target.value; render(); }); });
+  ["labels", "divider", "underline"].forEach(function (k) { $("s-" + k).addEventListener("change", function (e) { state.style[k] = e.target.checked; render(); }); });
+  $("v-photo").addEventListener("change", function (e) { state.vPhoto = e.target.checked; render(); });
+
+  function setMode(m, quiet) {
+    state.logo.mode = m;
+    $("mode-embed").setAttribute("aria-pressed", String(m === "embed"));
+    $("mode-url").setAttribute("aria-pressed", String(m === "url"));
+    $("embed-ctl").hidden = m !== "embed";
+    $("url-ctl").hidden = m !== "url";
+    if (!quiet) render();
+  }
+  $("mode-embed").addEventListener("click", function () { setMode("embed"); });
+  $("mode-url").addEventListener("click", function () { setMode("url"); $("f-logo-url").focus(); });
+  $("pick-logo").addEventListener("click", function () { $("f-logo-file").click(); });
+  $("remove-logo").addEventListener("click", function () { state.logo.data = ""; render(); say("Logo removed.", "ok"); });
+  // Draws any image (including SVG) to a canvas so the signature always carries a PNG/JPEG that mail apps can show.
+  function rasterize(src, preferJpeg, done, fail) {
+    var im = new Image();
+    im.onload = function () {
+      var nw = im.naturalWidth || 600, nh = im.naturalHeight || 240;
+      var tw = Math.min(nw, 520), th = Math.round(tw * nh / nw);
+      var c = document.createElement("canvas"); c.width = tw; c.height = th;
+      c.getContext("2d").drawImage(im, 0, 0, tw, th);
+      var png = c.toDataURL("image/png"), jpg = preferJpeg ? c.toDataURL("image/jpeg", 0.88) : "";
+      done(jpg && jpg.length < png.length ? jpg : png, tw / th);
+    };
+    im.onerror = fail || function () {};
+    im.src = src;
+  }
+
+  $("f-logo-file").addEventListener("change", function (e) {
+    var file = e.target.files && e.target.files[0]; if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      rasterize(reader.result, !/png|svg|gif|webp/.test(file.type), function (data, aspect) {
+        state.logo.data = data;
+        state.logo.aspect = aspect;
+        if (!state.logo.alt.trim()) state.logo.alt = state.org.trim() ? state.org.trim().replace(/,?\s*(Inc|LLC|Ltd)\.?$/i, "") + " logo" : "";
+        $("f-alt").value = state.logo.alt;
+        render();
+        say("Logo added (" + Math.round(state.logo.data.length * 0.75 / 1024) + " KB).", "ok");
+      }, function () { say("That file couldn’t be read as an image. Try a PNG or JPG.", "warn"); });
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  });
+
+  $("add-line").addEventListener("click", function () {
+    var t = $("add-type").value, n = +$("add-count").value;
+    for (var k = 0; k < n; k++) state.lines.push({ type: t, label: TYPES[t].label, value: "" });
+    renderLines(); render();
+    var f = $("ln-val-" + (state.lines.length - n)); if (f) f.focus();
+  });
+
+  var clearArmed = false, clearTimer;
+  $("clear-all").addEventListener("click", function () {
+    if (!clearArmed) {
+      clearArmed = true; this.textContent = "Click again to clear everything";
+      var b = this; clearTimer = setTimeout(function () { clearArmed = false; b.textContent = "Clear form"; }, 4000);
+      return;
+    }
+    clearTimeout(clearTimer); clearArmed = false; this.textContent = "Clear form";
+    state = blank(); syncForm(); say("Form cleared.", "ok"); $("f-name").focus();
+  });
+
+  // tabs
+  var tabs = ["preview", "html", "vcf"];
+  function showTab(name, focus) {
+    tabs.forEach(function (t) {
+      var on = t === name;
+      $("t-" + t).setAttribute("aria-selected", String(on));
+      $("t-" + t).tabIndex = on ? 0 : -1;
+      $("p-" + t).hidden = !on;
+    });
+    if (focus) $("t-" + name).focus();
+  }
+  tabs.forEach(function (t, i) {
+    $("t-" + t).addEventListener("click", function () { showTab(t); });
+    $("t-" + t).addEventListener("keydown", function (e) {
+      if (e.key === "ArrowRight") showTab(tabs[(i + 1) % tabs.length], true);
+      if (e.key === "ArrowLeft") showTab(tabs[(i + tabs.length - 1) % tabs.length], true);
+    });
+  });
+  $("bg-light").addEventListener("click", function () { $("mail").classList.remove("dark"); this.setAttribute("aria-pressed", "true"); $("bg-dark").setAttribute("aria-pressed", "false"); $("dark-note").hidden = true; });
+  $("bg-dark").addEventListener("click", function () { $("mail").classList.add("dark"); this.setAttribute("aria-pressed", "true"); $("bg-light").setAttribute("aria-pressed", "false"); $("dark-note").hidden = false; });
+
+  // status
+  var sayTimer;
+  function say(msg, kind) {
+    var s = $("status"); s.textContent = msg; s.className = "status " + (kind || "");
+    clearTimeout(sayTimer); sayTimer = setTimeout(function () { s.textContent = ""; }, 6000);
+  }
+
+  // copy
+  function selectAndCopy(node) {
+    var sel = window.getSelection(), r = document.createRange();
+    r.selectNodeContents(node); sel.removeAllRanges(); sel.addRange(r);
+    var ok = false; try { ok = document.execCommand("copy"); } catch (e) {}
+    return ok;
+  }
+  $("copy-sig").addEventListener("click", async function () {
+    var html = buildSignature();
+    try {
+      if (!window.ClipboardItem || !navigator.clipboard || !navigator.clipboard.write) throw 0;
+      await navigator.clipboard.write([new ClipboardItem({ "text/html": new Blob([html], { type: "text/html" }), "text/plain": new Blob([plainSignature()], { type: "text/plain" }) })]);
+      say("Signature copied. Paste it into your mail app’s signature settings.", "ok");
+    } catch (e) {
+      showTab("preview");
+      if (selectAndCopy($("sig"))) { window.getSelection().removeAllRanges(); say("Signature copied. Paste it into your mail app’s signature settings.", "ok"); }
+      else say("This browser blocked copying. The signature is selected in the preview: press ⌘C (or Ctrl+C).", "warn");
+    }
+  });
+  $("copy-html").addEventListener("click", async function () {
+    var html = buildSignature();
+    try { await navigator.clipboard.writeText(html); say("HTML copied.", "ok"); }
+    catch (e) {
+      showTab("html");
+      if (selectAndCopy($("code-html"))) { window.getSelection().removeAllRanges(); say("HTML copied.", "ok"); }
+      else say("This browser blocked copying. The code is selected: press ⌘C (or Ctrl+C).", "warn");
+    }
+  });
+
+  // saving files
+  var inViewer = !!(window.claude && typeof window.claude.use === "function");
+  var downloads = null;
+  if (inViewer) {
+    window.claude.use("downloads").then(function (d) { downloads = d; }).catch(function () { downloads = null; });
+  }
+  function slug() { return (state.name.trim() || "signature").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "signature"; }
+  async function saveFile(filename, data, mime) {
+    if (downloads) {
+      try { await downloads.save({ filename: filename, data: data }); say("Saved " + filename + ".", "ok"); }
+      catch (err) {
+        var code = err && err.code;
+        if (code === "declined") say("Save cancelled.", "");
+        else if (code === "rejected_extension" || code === "extension_not_enabled") say("This viewer can’t save " + filename.split(".").pop() + " files. Open the local copy of Signature Bench in your browser to save it, or copy the text from the vCard tab into a file ending in .vcf.", "warn");
+        else if (code === "rate_limited") say("A save prompt is already open. Finish that one first.", "warn");
+        else say("Saving isn’t available here. Use Copy instead.", "warn");
+      }
+      return;
+    }
+    if (inViewer) { say("Saving isn’t available in this view. Use Copy instead.", "warn"); return; }
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([data], { type: mime }));
+    a.download = filename; document.body.appendChild(a); a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    say("Saved " + filename + " to your Downloads folder.", "ok");
+  }
+  $("save-html").addEventListener("click", function () {
+    saveFile(slug() + "-signature.html", '<meta charset="utf-8">\n' + buildSignature() + "\n", "text/html");
+  });
+  $("save-vcf").addEventListener("click", function () {
+    saveFile(slug() + ".vcf", buildVCard(), "text/vcard");
+  });
+
+  syncForm();
+  if (/^data:image\/svg/.test(state.logo.data)) {
+    rasterize(state.logo.data, false, function (data, aspect) { state.logo.data = data; state.logo.aspect = aspect; render(); });
+  }
+})();
+</script>
+
+</body></html>
